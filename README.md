@@ -13,7 +13,15 @@ Genera 3 variantes de pitch + seguimientos + pre-agenda en segundos.
 3. Netlify detecta automáticamente el `netlify.toml`
 4. Ir a **Site settings → Environment variables** y agregar:
    ```
-   ANTHROPIC_API_KEY = sk-ant-xxxxxxxxxxxxxxxx
+   AI_API_KEY = <tu_api_key>
+   AI_PROVIDER = openai
+   ```
+   o usa la key específica:
+   ```
+   OPENAI_API_KEY = <tu_api_key>
+   OPENROUTER_API_KEY = <tu_api_key>
+   GLOQ_API_KEY = <tu_api_key>
+   ANTHROPIC_API_KEY = <tu_api_key>
    ```
 5. ¡Listo! El sitio quedará vivo en `https://tu-sitio.netlify.app`
 
@@ -32,7 +40,8 @@ npm install
 
 # 2. Crear el archivo .env con tu API key
 cp .env.example .env
-# Editá .env y pegá tu ANTHROPIC_API_KEY
+# Editá .env y pegá tu API key en AI_API_KEY.
+#+ Opcional: `AI_PROVIDER=openai|anthropic|openrouter|gloq`
 
 # 3. Iniciar el servidor
 npm start
@@ -41,11 +50,21 @@ npm start
 
 ---
 
-## 🔑 Cómo obtener tu API key de Anthropic
+## 🔑 Cómo usar cualquier API key
 
-1. Creá una cuenta en [console.anthropic.com](https://console.anthropic.com)
-2. Ir a **API Keys** → **Create Key**
-3. Copiá la key y pegala en el `.env` o en las variables de entorno de Netlify
+La app ahora puede funcionar con cualquier de estas keys:
+
+- `AI_API_KEY` (recomendado)
+- `OPENAI_API_KEY`
+- `OPENROUTER_API_KEY`
+- `GLOQ_API_KEY`
+- `ANTHROPIC_API_KEY`
+
+Si la variable `AI_PROVIDER` no está configurada, el backend intenta detectar el proveedor por el formato de la key.
+
+1. Copiá tu key de OpenAI, OpenRouter, Gloq o Anthropic.
+2. Pégala en `.env` como `AI_API_KEY`.
+3. Si quieres forzar el proveedor, agrega `AI_PROVIDER=openai|anthropic|openrouter|gloq`.
 
 ---
 
