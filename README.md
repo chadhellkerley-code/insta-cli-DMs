@@ -25,6 +25,8 @@ Genera 3 variantes de pitch + seguimientos + pre-agenda en segundos.
    ```
 5. ¡Listo! El sitio quedará vivo en `https://tu-sitio.netlify.app`
 
+> También puedes ingresar tu API key directamente en la app usando la rueda de configuración junto al botón `Generar flujo de DMs`.
+
 ---
 
 ## 💻 Correr en local
@@ -42,6 +44,7 @@ npm install
 cp .env.example .env
 # Editá .env y pegá tu API key en AI_API_KEY.
 #+ Opcional: `AI_PROVIDER=openai|anthropic|openrouter|gloq`
+# Si usas la UI, la key se guarda localmente en tu navegador.
 
 # 3. Iniciar el servidor
 npm start

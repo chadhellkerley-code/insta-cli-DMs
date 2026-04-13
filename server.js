@@ -17,14 +17,16 @@ app.post('/api/generate', async (req, res) => {
     ai: env.AI_API_KEY,
   };
 
-  const apiKey = keys[provider] || keys.ai || keys.openai || keys.openrouter || keys.gloq || keys.anthropic;
+  const body = req.body || {};
+  const userApiKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : '';
+  const apiKey = userApiKey || keys[provider] || keys.ai || keys.openai || keys.openrouter || keys.gloq || keys.anthropic;
   if (!apiKey) {
-    return res.status(500).json({ error: { message: 'No se encontró una API key válida en el servidor. Configurá AI_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, GLOQ_API_KEY o ANTHROPIC_API_KEY.' } });
+    return res.status(500).json({ error: { message: 'No se encontró una API key válida en el servidor o en el navegador. Configurá AI_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, GLOQ_API_KEY, ANTHROPIC_API_KEY, o ingresa tu key desde la rueda de configuración.' } });
   }
 
   const resolvedProvider = provider || guessProvider(apiKey);
   const model = env.AI_MODEL || env.MODEL || (resolvedProvider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4o-mini');
-  const { url, headers, payload } = buildRequest(resolvedProvider, apiKey, model, req.body);
+  const { url, headers, payload } = buildRequest(resolvedProvider, apiKey, model, body);
 
   try {
     const response = await fetch(url, {

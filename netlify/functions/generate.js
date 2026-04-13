@@ -15,12 +15,13 @@ exports.handler = async (event) => {
     gloq: env.GLOQ_API_KEY,
     ai: env.AI_API_KEY,
   };
-
-  const apiKey = keys[provider] || keys.ai || keys.openai || keys.openrouter || keys.gloq || keys.anthropic;
+  const body = JSON.parse(event.body || '{}');
+  const userApiKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : '';
+  const apiKey = userApiKey || keys[provider] || keys.ai || keys.openai || keys.openrouter || keys.gloq || keys.anthropic;
   if (!apiKey) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: { message: 'No se encontró una API key válida. Configurá AI_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, GLOQ_API_KEY o ANTHROPIC_API_KEY.' } }),
+      body: JSON.stringify({ error: { message: 'No se encontró una API key válida. Configurá AI_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, GLOQ_API_KEY, ANTHROPIC_API_KEY, o ingresa tu key desde la rueda de configuración.' } }),
     };
   }
 
@@ -28,8 +29,6 @@ exports.handler = async (event) => {
   const model = env.AI_MODEL || env.MODEL || (resolvedProvider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4o-mini');
 
   try {
-    const body = JSON.parse(event.body);
-
     const { url, headers, payload } = buildRequest(resolvedProvider, apiKey, model, body);
 
     const response = await fetch(url, {

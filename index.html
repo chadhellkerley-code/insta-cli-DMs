@@ -157,6 +157,15 @@ textarea::placeholder{color:var(--faint)}
 }
 .reset-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border3)}
 
+.action-row{display:flex;align-items:center;gap:10px}
+.config-btn{width:46px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:16px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all .2s;flex-shrink:0}
+.config-btn:hover{border-color:#555;color:#fff}
+.config-panel{display:none;flex-direction:column;gap:10px;padding:16px;border:1px solid var(--border2);border-radius:18px;background:rgba(14,14,14,.96);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.config-panel.open{display:flex}
+.config-input{width:100%;border:1px solid var(--border3);border-radius:12px;padding:12px 14px;background:var(--surface3);color:var(--text);font-size:14px;outline:none}
+.config-input:focus{border-color:#666;box-shadow:0 0 0 3px rgba(131,58,180,.08)}
+.config-note{font-size:12px;color:var(--muted);line-height:1.5}
+
 /* MAIN */
 .main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
 
@@ -368,9 +377,23 @@ textarea::placeholder{color:var(--faint)}
       </div>
 
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:auto">
-        <button class="gen-btn" id="gen-btn" onclick="generate()">
-          ✦ Generar flujo de DMs
-        </button>
+        <div class="action-row">
+          <button class="gen-btn" id="gen-btn" onclick="generate()">
+            ✦ Generar flujo de DMs
+          </button>
+          <button class="config-btn" id="config-toggle" type="button" onclick="toggleConfig()" title="Configurar API key">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm8.5 3.5a1.5 1.5 0 0 1-.1.6l2.1 1.6a.5.5 0 0 1 .1.7l-2 3.4a.5.5 0 0 1-.6.2l-2.5-1a8.3 8.3 0 0 1-1.6.9l-.4 2.7a.5.5 0 0 1-.5.4h-4a.5.5 0 0 1-.5-.4l-.4-2.7a8.3 8.3 0 0 1-1.6-.9l-2.5 1a.5.5 0 0 1-.6-.2l-2-3.4a.5.5 0 0 1 .1-.7l2.1-1.6a1.5 1.5 0 0 1 0-1.2L2.1 10.6a.5.5 0 0 1-.1-.7l2-3.4a.5.5 0 0 1 .6-.2l2.5 1c.5-.3 1-.6 1.6-.9l.4-2.7A.5.5 0 0 1 9.5 3h4a.5.5 0 0 1 .5.4l.4 2.7c.6.2 1.1.5 1.6.9l2.5-1a.5.5 0 0 1 .6.2l2 3.4c.1.2.1.5-.1.7l-2.1 1.6c.1.2.1.5.1.7z"/></svg>
+          </button>
+        </div>
+        <div class="config-panel" id="config-panel">
+          <div class="field-label">API key</div>
+          <input id="api-key-input" class="config-input" type="password" placeholder="sk-or-v1..." autocomplete="off" />
+          <div class="config-note">Guardada localmente en tu navegador. Se usará solo para esta sesión.</div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+            <button class="reset-btn" type="button" onclick="closeConfig()">Cancelar</button>
+            <button class="gen-btn" type="button" onclick="saveApiKey()">Guardar</button>
+          </div>
+        </div>
         <button class="reset-btn" id="reset-btn" onclick="reset()" style="display:none">
           Nuevo flujo
         </button>
@@ -457,6 +480,48 @@ const vGrads = [
   'linear-gradient(135deg,#2563eb,#4d9de0)',
   'linear-gradient(135deg,#15803d,#22c55e)',
 ];
+
+const STORAGE_KEY = 'insta_cli_dms_api_key';
+
+function loadSavedKey(){
+  const key = localStorage.getItem(STORAGE_KEY) || '';
+  const input = document.getElementById('api-key-input');
+  if(input){ input.value = key; }
+  updateConfigStatus();
+}
+
+function saveApiKey(){
+  const input = document.getElementById('api-key-input');
+  const key = input?.value.trim() || '';
+  if(!key){
+    alert('Ingresá tu API key para continuar.');
+    return;
+  }
+  localStorage.setItem(STORAGE_KEY, key);
+  closeConfig();
+  updateConfigStatus();
+}
+
+function getSavedKey(){
+  return document.getElementById('api-key-input')?.value.trim() || localStorage.getItem(STORAGE_KEY) || '';
+}
+
+function toggleConfig(){
+  const panel = document.getElementById('config-panel');
+  panel.classList.toggle('open');
+}
+
+function closeConfig(){
+  const panel = document.getElementById('config-panel');
+  panel.classList.remove('open');
+}
+
+function updateConfigStatus(){
+  const btn = document.getElementById('config-toggle');
+  const key = localStorage.getItem(STORAGE_KEY) || '';
+  if(!btn) return;
+  btn.style.color = key ? '#fff' : 'var(--text2)';
+}
 
 // DRAG & DROP
 const zone = document.getElementById('upload-zone');
@@ -574,13 +639,13 @@ Respondé ÚNICAMENTE con JSON válido, sin markdown, sin texto antes ni despué
 {"variants":[{"name":"Variante 1: Curiosidad + Dolor Implícito","pitch":[{"label":"Msg 1 — Conexión","text":"..."},{"label":"Msg 2 — Oferta","text":"..."},{"label":"Msg 3 — Invitación a Meet","text":"..."}],"seguimiento":[{"timing":"A las 24hs","text":"..."},{"timing":"A los 3 días","text":"..."},{"timing":"A los 7 días","text":"..."},{"timing":"A los 14 días","text":"..."},{"timing":"Al mes — Reactivación","text":"..."}],"preagenda":[{"step":"Confirmación inmediata","text":"..."},{"step":"24hs antes","text":"..."},{"step":"2hs antes","text":"..."},{"step":"No apareció","text":"..."},{"step":"Post-llamada sin cierre","text":"..."}]},{"name":"Variante 2: Dolor Directo + Autoridad","pitch":[...],"seguimiento":[...],"preagenda":[...]},{"name":"Variante 3: Historia + Resultado Concreto","pitch":[...],"seguimiento":[...],"preagenda":[...]}]}`});
 
   try{
-    const resp = await fetch('/api/generate',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        messages:[{role:'user',content}]
-      })
-    });
+      const apiKey = getSavedKey();
+      const payload = apiKey ? { messages:[{role:'user',content}], apiKey } : { messages:[{role:'user',content}] };
+      const resp = await fetch('/api/generate',{ 
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)
+      });
 
     const d = await resp.json();
     clearInterval(loadTimer);
@@ -708,6 +773,8 @@ function reset(){
   document.getElementById('gen-btn').disabled=false;
   document.getElementById('avatar-input').value='';
 }
+
+loadSavedKey();
 </script>
 </body>
 </html>
