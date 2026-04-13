@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Insta Cli DMs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#050505;
+  --surface:#0d0d0d;
+  --surface2:#141414;
+  --surface3:#1c1c1c;
+  --surface4:#242424;
+  --border:#1f1f1f;
+  --border2:#2a2a2a;
+  --border3:#333;
+  --text:#f5f5f5;
+  --text2:#c8c8c8;
+  --muted:#6b6b6b;
+  --faint:#333;
+  --pink:#e1306c;
+  --pink2:#c13584;
+  --purple:#833ab4;
+  --orange:#fcb045;
+  --blue:#4d9de0;
+  --green:#22c55e;
+  --ig-grad:linear-gradient(135deg,#833ab4 0%,#fd1d1d 50%,#fcb045 100%);
+  --ig-grad2:linear-gradient(135deg,#405de6,#5851db,#833ab4,#c13584,#e1306c,#fd1d1d,#f56040,#f77737,#fcb045,#ffdc80);
+  --radius:14px;
+  --radius-sm:9px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border3);border-radius:99px}
+
+/* TOPBAR */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(5,5,5,.92);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;height:58px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-logo{
+  width:36px;height:36px;border-radius:10px;
+  background:var(--ig-grad);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 20px rgba(225,48,108,.3);
+}
+.brand-logo svg{width:20px;height:20px;fill:#fff}
+.brand-name{
+  font-size:17px;font-weight:800;letter-spacing:-.5px;
+  background:var(--ig-grad2);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.badge{
+  font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  background:rgba(131,58,180,.15);color:#a060e0;
+  border:1px solid rgba(131,58,180,.3);
+  padding:4px 10px;border-radius:99px;
+}
+
+/* LAYOUT */
+.layout{display:flex;height:calc(100vh - 58px);overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{
+  width:320px;flex-shrink:0;
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow-y:auto;
+  background:var(--surface);
+}
+.sidebar-inner{padding:22px;display:flex;flex-direction:column;gap:20px;flex:1}
+
+.field-label{
+  font-size:10px;font-weight:700;letter-spacing:1.2px;
+  text-transform:uppercase;color:var(--muted);
+  margin-bottom:9px;
+  display:flex;align-items:center;gap:6px;
+}
+.field-label svg{width:12px;height:12px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2}
+
+textarea{
+  width:100%;background:var(--surface2);
+  border:1px solid var(--border2);border-radius:var(--radius-sm);
+  color:var(--text);font-family:inherit;font-size:13.5px;
+  padding:13px 15px;resize:none;line-height:1.65;
+  outline:none;transition:border-color .2s,box-shadow .2s;
+}
+textarea:focus{border-color:#3a3a3a;box-shadow:0 0 0 3px rgba(131,58,180,.08)}
+textarea::placeholder{color:var(--faint)}
+
+/* UPLOAD */
+.upload-zone{
+  border:1.5px dashed var(--border3);border-radius:var(--radius-sm);
+  padding:16px;text-align:center;cursor:pointer;
+  transition:border-color .2s,background .2s;
+  position:relative;background:var(--surface2);
+}
+.upload-zone:hover,.upload-zone.drag{border-color:#555;background:#111}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{
+  width:38px;height:38px;background:var(--surface3);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;margin:0 auto 10px;
+}
+.upload-icon svg{width:16px;height:16px;stroke:#666;fill:none;stroke-width:1.5}
+.upload-txt{font-size:12.5px;color:var(--muted);line-height:1.6}
+.upload-txt b{color:var(--blue);font-weight:700}
+.upload-sub{font-size:11px;color:var(--faint);margin-top:3px}
+
+.previews{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.prev-wrap{position:relative}
+.prev-img{width:58px;height:58px;border-radius:10px;object-fit:cover;border:1.5px solid var(--border2);display:block}
+.prev-rm{
+  position:absolute;top:-6px;right:-6px;
+  width:18px;height:18px;background:#be123c;
+  border:2px solid var(--surface);border-radius:50%;
+  color:#fff;font-size:10px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;line-height:1;
+  transition:transform .15s;
+}
+.prev-rm:hover{transform:scale(1.15)}
+
+/* GENERATE BUTTON */
+.gen-btn{
+  width:100%;padding:15px;border-radius:var(--radius-sm);border:none;
+  background:var(--ig-grad);color:#fff;
+  font-family:inherit;font-size:14.5px;font-weight:800;
+  cursor:pointer;transition:opacity .15s,transform .1s,box-shadow .2s;
+  letter-spacing:.3px;
+  box-shadow:0 4px 24px rgba(225,48,108,.25);
+  position:relative;overflow:hidden;
+}
+.gen-btn::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(rgba(255,255,255,.1),transparent);
+}
+.gen-btn:hover:not(:disabled){opacity:.9;box-shadow:0 6px 32px rgba(225,48,108,.4);transform:translateY(-1px)}
+.gen-btn:active:not(:disabled){transform:translateY(0) scale(.98)}
+.gen-btn:disabled{opacity:.3;cursor:not-allowed;box-shadow:none}
+
+.reset-btn{
+  width:100%;padding:11px;border-radius:var(--radius-sm);
+  border:1px solid var(--border2);background:transparent;
+  color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .15s;
+}
+.reset-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border3)}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+
+/* EMPTY / LOADING */
+.center-state{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:16px;padding:40px;
+}
+.empty-icon-wrap{
+  width:72px;height:72px;border-radius:20px;
+  background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+}
+.empty-icon-wrap svg{width:32px;height:32px;fill:none;stroke:var(--faint);stroke-width:1.5}
+.empty-title{font-size:16px;font-weight:700;color:#444}
+.empty-sub{font-size:13px;color:var(--faint);text-align:center;max-width:240px;line-height:1.6}
+
+/* FEATURES LIST */
+.features{display:flex;flex-direction:column;gap:8px;margin-top:8px;max-width:280px;width:100%}
+.feat-row{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;
+}
+.feat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.feat-txt{font-size:12px;color:var(--muted)}
+
+/* SPINNER */
+.spinner{
+  width:36px;height:36px;border-radius:50%;
+  border:2.5px solid var(--border2);
+  border-top-color:var(--pink);
+  animation:spin .75s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:13.5px;color:var(--muted);font-weight:500}
+.dots span{display:inline-block;animation:blink 1.2s ease infinite}
+.dots span:nth-child(2){animation-delay:.2s}
+.dots span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.15}40%{opacity:1}}
+
+/* RESULTS */
+.results-wrap{padding:22px;display:flex;flex-direction:column;gap:18px}
+
+/* VARIANT TABS */
+.variant-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.vtab{
+  padding:8px 16px;border-radius:99px;
+  border:1px solid var(--border2);background:transparent;
+  color:var(--muted);font-family:inherit;font-size:12px;font-weight:700;
+  cursor:pointer;transition:all .2s;
+}
+.vtab:hover{border-color:#444;color:var(--text2)}
+.vtab.active{color:#fff}
+.vtab.v0.active{background:rgba(193,53,132,.15);border-color:var(--pink2);color:#e060a0}
+.vtab.v1.active{background:rgba(77,157,224,.12);border-color:var(--blue);color:var(--blue)}
+.vtab.v2.active{background:rgba(34,197,94,.1);border-color:var(--green);color:var(--green)}
+
+/* CARD */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+}
+
+/* SECTION TABS */
+.section-tabs{
+  display:flex;border-bottom:1px solid var(--border);
+  background:var(--surface2);
+}
+.stab{
+  padding:13px 20px;font-size:12px;font-weight:700;
+  color:var(--muted);cursor:pointer;letter-spacing:.3px;
+  border-bottom:2px solid transparent;transition:all .2s;
+  white-space:nowrap;
+}
+.stab:hover{color:var(--text2)}
+.stab.active{color:var(--text);border-bottom-color:var(--pink)}
+
+.tab-panel{display:none;padding:18px}
+.tab-panel.active{display:block}
+
+/* MSG CARD */
+.msg-card{
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:12px;padding:16px;margin-bottom:12px;position:relative;
+}
+.msg-card:last-child{margin-bottom:0}
+.msg-card-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.msg-num{
+  width:26px;height:26px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;color:#fff;flex-shrink:0;
+}
+.msg-label{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.msg-body{
+  font-size:13.5px;color:var(--text);line-height:1.7;
+  white-space:pre-wrap;padding-right:60px;
+}
+
+/* COPY BTN */
+.copy-btn{
+  position:absolute;top:14px;right:14px;
+  background:var(--surface3);border:1px solid var(--border2);
+  border-radius:7px;color:var(--muted);
+  font-family:inherit;font-size:10px;font-weight:700;
+  padding:5px 10px;cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.copy-btn:hover{background:var(--surface4);color:var(--text)}
+.copy-btn.ok{background:#052e16;color:var(--green);border-color:#166534}
+
+/* FOLLOW ROW */
+.follow-row{padding:14px 0;border-bottom:1px solid var(--border)}
+.follow-row:last-child{border-bottom:none}
+.follow-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:#0f0f2a;border:1px solid #2d2d5a;
+  border-radius:99px;padding:4px 12px;margin-bottom:10px;
+}
+.follow-badge svg{width:11px;height:11px;stroke:#7c7cf0;fill:none;stroke-width:2;flex-shrink:0}
+.follow-badge-txt{font-size:11px;font-weight:700;color:#9090f7;letter-spacing:.3px}
+.follow-body{font-size:13.5px;color:var(--text);line-height:1.7;white-space:pre-wrap;margin-bottom:8px}
+.inline-copy{
+  background:var(--surface3);border:1px solid var(--border2);
+  border-radius:7px;color:var(--muted);
+  font-family:inherit;font-size:10px;font-weight:700;
+  padding:4px 9px;cursor:pointer;transition:all .15s;
+}
+.inline-copy:hover{color:var(--text)}
+.inline-copy.ok{background:#052e16;color:var(--green);border-color:#166534}
+
+/* PRE-AGENDA STEP */
+.step-row{display:flex;gap:14px;margin-bottom:16px;align-items:flex-start}
+.step-row:last-child{margin-bottom:0}
+.step-num{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;color:#fff;flex-shrink:0;
+}
+.step-body{flex:1}
+.step-name{font-size:12.5px;font-weight:800;color:var(--text);margin-bottom:5px}
+.step-txt{font-size:13.5px;color:var(--text2);line-height:1.7;white-space:pre-wrap;margin-bottom:8px}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--border);margin:0}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:#0f3320;border:1px solid #166534;
+  color:var(--green);font-size:13px;font-weight:600;
+  padding:10px 20px;border-radius:99px;
+  opacity:0;transition:all .3s;pointer-events:none;z-index:999;
+  white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* RESPONSIVE */
+@media(max-width:700px){
+  .layout{flex-direction:column;height:auto}
+  .sidebar{width:100%;border-right:none;border-bottom:1px solid var(--border)}
+  .main{min-height:60vh}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-logo">
+      <svg viewBox="0 0 24 24"><path d="M17.34 5.46a1.2 1.2 0 1 0 1.2 1.2 1.2 1.2 0 0 0-1.2-1.2zm4.6 2.42a7.59 7.59 0 0 0-.46-2.43 4.94 4.94 0 0 0-1.16-1.77 4.7 4.7 0 0 0-1.77-1.15 7.3 7.3 0 0 0-2.43-.47C15.06 2 14.72 2 12 2s-3.06 0-4.12.06a7.3 7.3 0 0 0-2.43.47 4.78 4.78 0 0 0-1.77 1.15 4.7 4.7 0 0 0-1.15 1.77 7.3 7.3 0 0 0-.47 2.43C2 8.94 2 9.28 2 12s0 3.06.06 4.12a7.3 7.3 0 0 0 .47 2.43 4.7 4.7 0 0 0 1.15 1.77 4.78 4.78 0 0 0 1.77 1.15 7.3 7.3 0 0 0 2.43.47C8.94 22 9.28 22 12 22s3.06 0 4.12-.06a7.3 7.3 0 0 0 2.43-.47 4.7 4.7 0 0 0 1.77-1.15 4.94 4.94 0 0 0 1.16-1.77 7.59 7.59 0 0 0 .46-2.43C22 15.06 22 14.72 22 12s0-3.06-.06-4.12zM12 17a5 5 0 1 1 5-5 5 5 0 0 1-5 5z"/></svg>
+    </div>
+    <span class="brand-name">Insta Cli DMs</span>
+  </div>
+  <div class="topbar-right">
+    <span class="badge">AI-Powered</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-inner">
+
+      <div>
+        <div class="field-label">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Describí tu avatar
+        </div>
+        <textarea id="avatar-input" rows="6"
+          placeholder="Ej: coaches de fitness entre 25-40 años, tienen seguidores pero no convierten en clientes. Vendo un método de ventas orgánicas por DM sin publicidad paga..."></textarea>
+      </div>
+
+      <div>
+        <div class="field-label">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+          Capturas de tu perfil IG
+        </div>
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" id="file-input" accept="image/*" multiple/>
+          <div class="upload-icon">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <div class="upload-txt"><b>Subí capturas</b> de tu IG</div>
+          <div class="upload-sub">para que la IA entienda tu contexto y marca</div>
+        </div>
+        <div class="previews" id="previews"></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:auto">
+        <button class="gen-btn" id="gen-btn" onclick="generate()">
+          ✦ Generar flujo de DMs
+        </button>
+        <button class="reset-btn" id="reset-btn" onclick="reset()" style="display:none">
+          Nuevo flujo
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="main">
+
+    <!-- EMPTY STATE -->
+    <div class="center-state" id="empty-state">
+      <div class="empty-icon-wrap">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="empty-title">Listo para generar</div>
+      <div class="empty-sub">Describí tu avatar y generá tu flujo completo de DMs con 3 variantes distintas</div>
+      <div class="features">
+        <div class="feat-row">
+          <div class="feat-dot" style="background:var(--pink)"></div>
+          <div class="feat-txt">3 variantes con enfoques únicos</div>
+        </div>
+        <div class="feat-row">
+          <div class="feat-dot" style="background:var(--blue)"></div>
+          <div class="feat-txt">Pitch de 3 mensajes por variante</div>
+        </div>
+        <div class="feat-row">
+          <div class="feat-dot" style="background:var(--purple)"></div>
+          <div class="feat-txt">Seguimientos con timing exacto</div>
+        </div>
+        <div class="feat-row">
+          <div class="feat-dot" style="background:var(--green)"></div>
+          <div class="feat-txt">Flujo de pre-agenda paso a paso</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOADING STATE -->
+    <div class="center-state" id="loading-state" style="display:none">
+      <div class="spinner"></div>
+      <div class="loading-txt" id="loading-txt">
+        Analizando tu avatar<span class="dots"><span>.</span><span>.</span><span>.</span></span>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="results" style="display:none">
+      <div class="results-wrap">
+
+        <div>
+          <div class="field-label" style="margin-bottom:10px">Variantes generadas</div>
+          <div class="variant-tabs" id="variant-tabs"></div>
+        </div>
+
+        <div class="card">
+          <div class="section-tabs" id="section-tabs">
+            <div class="stab active" onclick="switchSection('pitch',this)">🎯 Pitch inicial</div>
+            <div class="stab" onclick="switchSection('seguimiento',this)">🔔 Seguimiento</div>
+            <div class="stab" onclick="switchSection('preagenda',this)">📅 Pre-agenda</div>
+          </div>
+          <div>
+            <div class="tab-panel active" id="panel-pitch"></div>
+            <div class="tab-panel" id="panel-seguimiento"></div>
+            <div class="tab-panel" id="panel-preagenda"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<div class="toast" id="toast">¡Copiado al portapapeles!</div>
+
+<script>
+const imgs = [];
+let flowData = null;
+let activeVariant = 0;
+const vColors = ['#c13584','#4d9de0','#22c55e'];
+const vGrads = [
+  'linear-gradient(135deg,#833ab4,#e1306c)',
+  'linear-gradient(135deg,#2563eb,#4d9de0)',
+  'linear-gradient(135deg,#15803d,#22c55e)',
+];
+
+// DRAG & DROP
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e=>{e.preventDefault();zone.classList.add('drag')});
+zone.addEventListener('dragleave', ()=>zone.classList.remove('drag'));
+zone.addEventListener('drop', e=>{
+  e.preventDefault();zone.classList.remove('drag');
+  Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/')).forEach(addImg);
+});
+
+document.getElementById('file-input').addEventListener('change', function(e){
+  Array.from(e.target.files).forEach(addImg);
+  this.value='';
+});
+
+function addImg(f){
+  const r = new FileReader();
+  r.onload = ev => { imgs.push({name:f.name,src:ev.target.result}); renderPreviews(); };
+  r.readAsDataURL(f);
+}
+
+function renderPreviews(){
+  document.getElementById('previews').innerHTML = imgs.map((img,i)=>`
+    <div class="prev-wrap">
+      <img src="${img.src}" class="prev-img" title="${img.name}"/>
+      <button class="prev-rm" onclick="removeImg(${i})">×</button>
+    </div>`).join('');
+}
+
+function removeImg(i){ imgs.splice(i,1); renderPreviews(); }
+
+// LOADING MESSAGES
+const loadMsgs = [
+  'Analizando tu avatar',
+  'Buscando los dolores del mercado',
+  'Armando el pitch perfecto',
+  'Creando los seguimientos',
+  'Diseñando la pre-agenda',
+  'Generando las 3 variantes',
+];
+let loadIdx=0, loadTimer;
+
+async function generate(){
+  const prompt = document.getElementById('avatar-input').value.trim();
+  if(!prompt){
+    const ta = document.getElementById('avatar-input');
+    ta.style.borderColor='#e1306c';
+    ta.style.boxShadow='0 0 0 3px rgba(225,48,108,.15)';
+    setTimeout(()=>{ta.style.borderColor='';ta.style.boxShadow=''},2500);
+    return;
+  }
+
+  document.getElementById('gen-btn').disabled = true;
+  document.getElementById('reset-btn').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('loading-state').style.display = 'flex';
+
+  loadIdx=0;
+  const ltxt = document.getElementById('loading-txt');
+  clearInterval(loadTimer);
+  loadTimer = setInterval(()=>{
+    loadIdx=(loadIdx+1)%loadMsgs.length;
+    ltxt.innerHTML = loadMsgs[loadIdx]+'<span class="dots"><span>.</span><span>.</span><span>.</span></span>';
+  },2200);
+
+  // Build message content
+  const content = [];
+
+  // Add images if any (for Claude vision)
+  imgs.forEach(img=>{
+    const [meta,b64] = img.src.split(',');
+    const mediaType = meta.match(/:(.*?);/)?.[1] || 'image/jpeg';
+    content.push({type:'image',source:{type:'base64',media_type:mediaType,data:b64}});
+  });
+
+  if(imgs.length>0){
+    content.push({type:'text',text:`Estas son ${imgs.length} captura(s) del perfil de Instagram del usuario que te está hablando. Analizalas para entender su marca, estilo, propuesta de valor, tono, y cómo comunica para crear mensajes alineados a su identidad.`});
+  }
+
+  content.push({type:'text',text:`Sos un experto en ventas por DM de Instagram con años de experiencia cerrando clientes de alto valor de forma orgánica. Tu especialidad es crear flujos de conversación que se sienten 100% humanos, naturales y con mucho contexto del dolor del avatar.
+
+AVATAR / PRODUCTO A VENDER:
+${prompt}
+
+INSTRUCCIÓN CRÍTICA: Generá exactamente 3 VARIANTES con enfoques COMPLETAMENTE DISTINTOS. Cada variante debe usar una estrategia psicológica diferente:
+- Variante 1: CURIOSIDAD + DOLOR IMPLÍCITO (despertás interés sin revelar todo)
+- Variante 2: DOLOR DIRECTO + AUTORIDAD (atacás el problema de frente con prueba social)
+- Variante 3: HISTORIA + RESULTADO CONCRETO (storytelling emocional con transformación)
+
+Para cada variante necesito:
+
+PITCH - Exactamente 3 mensajes separados (cortos, como DMs reales de IG, sin párrafos largos):
+- Msg 1 CONEXIÓN: respondés al mensaje que te enviaron, preguntás con curiosidad para identificar su dolor específico, sin vender todavía
+- Msg 2 OFERTA: presentación impactante de tu oferta conectada a su dolor, con resultado específico y concreto
+- Msg 3 CTA: invitación natural, no forzada, a una llamada de Google Meet de 30 minutos
+
+SEGUIMIENTO - 5 mensajes si no responde (distintos tonos, no repitas estructura):
+- 24 horas después (suave toque)
+- 3 días después (nuevo ángulo, diferente hook)
+- 7 días después (urgencia o valor nuevo)
+- 14 días después (último empuje antes de soltar)
+- 30 días (reactivación total, como si fuera la primera vez, enfoque fresco)
+
+PRE-AGENDA - 5 pasos cuando agendaron la llamada:
+- Confirmación inmediata (dentro de los primeros minutos de agendar, entusiasta y cálido)
+- 24hs antes (recordatorio + tarea/preparación previa específica para el avatar)
+- 2hs antes (recordatorio corto y confiado)
+- No apareció a la llamada (re-agendar amigable, sin presión, abrís otra ventana)
+- Post-llamada sin cierre (seguimiento para cerrar, abordás la objeción más común del avatar)
+
+IMPORTANTE: Todos los mensajes deben sonar HUMANOS, conversacionales, como si los escribiera una persona real en su teléfono. Nada corporativo. Usá el estilo de IG: mensajes cortos, directos, con algún emoji ocasional si aplica al avatar.
+
+Respondé ÚNICAMENTE con JSON válido, sin markdown, sin texto antes ni después, sin bloques de código:
+{"variants":[{"name":"Variante 1: Curiosidad + Dolor Implícito","pitch":[{"label":"Msg 1 — Conexión","text":"..."},{"label":"Msg 2 — Oferta","text":"..."},{"label":"Msg 3 — Invitación a Meet","text":"..."}],"seguimiento":[{"timing":"A las 24hs","text":"..."},{"timing":"A los 3 días","text":"..."},{"timing":"A los 7 días","text":"..."},{"timing":"A los 14 días","text":"..."},{"timing":"Al mes — Reactivación","text":"..."}],"preagenda":[{"step":"Confirmación inmediata","text":"..."},{"step":"24hs antes","text":"..."},{"step":"2hs antes","text":"..."},{"step":"No apareció","text":"..."},{"step":"Post-llamada sin cierre","text":"..."}]},{"name":"Variante 2: Dolor Directo + Autoridad","pitch":[...],"seguimiento":[...],"preagenda":[...]},{"name":"Variante 3: Historia + Resultado Concreto","pitch":[...],"seguimiento":[...],"preagenda":[...]}]}`});
+
+  try{
+    const resp = await fetch('/api/generate',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        messages:[{role:'user',content}]
+      })
+    });
+
+    const d = await resp.json();
+    clearInterval(loadTimer);
+
+    if(d.error){
+      throw new Error(d.error.message||'API error');
+    }
+
+    const raw = d.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(raw);
+    flowData = parsed;
+    activeVariant = 0;
+    renderResults();
+
+  }catch(err){
+    clearInterval(loadTimer);
+    console.error(err);
+    document.getElementById('loading-state').style.display='none';
+    document.getElementById('empty-state').style.display='flex';
+    document.getElementById('gen-btn').disabled=false;
+    alert('Error al generar. Verificá tu conexión e intentá de nuevo.\n\n'+err.message);
+  }
+}
+
+function renderResults(){
+  document.getElementById('loading-state').style.display='none';
+  document.getElementById('results').style.display='block';
+  document.getElementById('gen-btn').disabled=false;
+  document.getElementById('reset-btn').style.display='block';
+
+  const tabs = document.getElementById('variant-tabs');
+  tabs.innerHTML = flowData.variants.map((v,i)=>`
+    <button class="vtab v${i} ${i===activeVariant?'active':''}" onclick="selectVariant(${i})">${v.name}</button>
+  `).join('');
+
+  // Reset section tabs to first
+  document.querySelectorAll('.stab').forEach((t,j)=>t.classList.toggle('active',j===0));
+  document.querySelectorAll('.tab-panel').forEach((p,j)=>p.classList.toggle('active',j===0));
+
+  renderVariantContent();
+}
+
+function selectVariant(i){
+  activeVariant=i;
+  document.querySelectorAll('.vtab').forEach((t,j)=>t.classList.toggle('active',j===i));
+  renderVariantContent();
+  document.querySelectorAll('.stab').forEach((t,j)=>t.classList.toggle('active',j===0));
+  document.querySelectorAll('.tab-panel').forEach((p,j)=>p.classList.toggle('active',j===0));
+}
+
+function renderVariantContent(){
+  const v = flowData.variants[activeVariant];
+  const grad = vGrads[activeVariant] || vGrads[0];
+
+  // PITCH
+  document.getElementById('panel-pitch').innerHTML = v.pitch.map((m,i)=>`
+    <div class="msg-card">
+      <div class="msg-card-head">
+        <div class="msg-num" style="background:${grad}">${i+1}</div>
+        <span class="msg-label">${m.label}</span>
+      </div>
+      <div class="msg-body">${escHtml(m.text)}</div>
+      <button class="copy-btn" onclick="cp(this,${JSON.stringify(m.text)})">Copiar</button>
+    </div>`).join('');
+
+  // SEGUIMIENTO
+  document.getElementById('panel-seguimiento').innerHTML = v.seguimiento.map(s=>`
+    <div class="follow-row">
+      <div class="follow-badge">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span class="follow-badge-txt">${escHtml(s.timing)}</span>
+      </div>
+      <div class="follow-body">${escHtml(s.text)}</div>
+      <button class="inline-copy" onclick="cp(this,${JSON.stringify(s.text)})">Copiar</button>
+    </div>`).join('');
+
+  // PRE-AGENDA
+  document.getElementById('panel-preagenda').innerHTML = v.preagenda.map((p,i)=>`
+    <div class="step-row">
+      <div class="step-num" style="background:${grad}">${i+1}</div>
+      <div class="step-body">
+        <div class="step-name">${escHtml(p.step)}</div>
+        <div class="step-txt">${escHtml(p.text)}</div>
+        <button class="inline-copy" onclick="cp(this,${JSON.stringify(p.text)})">Copiar</button>
+      </div>
+    </div>`).join('');
+}
+
+function switchSection(name,el){
+  document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+}
+
+function escHtml(s){
+  return s
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+let toastTimer;
+function cp(btn, txt){
+  navigator.clipboard.writeText(txt).then(()=>{
+    const orig = btn.textContent;
+    btn.textContent='¡Copiado!';
+    btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent=orig;btn.classList.remove('ok')},2000);
+
+    const toast = document.getElementById('toast');
+    clearTimeout(toastTimer);
+    toast.classList.add('show');
+    toastTimer = setTimeout(()=>toast.classList.remove('show'),2200);
+  });
+}
+
+function reset(){
+  flowData=null;activeVariant=0;
+  imgs.length=0;renderPreviews();
+  document.getElementById('results').style.display='none';
+  document.getElementById('empty-state').style.display='flex';
+  document.getElementById('reset-btn').style.display='none';
+  document.getElementById('gen-btn').disabled=false;
+  document.getElementById('avatar-input').value='';
+}
+</script>
+</body>
+</html>
