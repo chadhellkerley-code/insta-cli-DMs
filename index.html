@@ -165,6 +165,10 @@ textarea::placeholder{color:var(--faint)}
 .config-input{width:100%;border:1px solid var(--border3);border-radius:12px;padding:12px 14px;background:var(--surface3);color:var(--text);font-size:14px;outline:none}
 .config-input:focus{border-color:#666;box-shadow:0 0 0 3px rgba(131,58,180,.08)}
 .config-note{font-size:12px;color:var(--muted);line-height:1.5}
+.config-grid{display:flex;flex-direction:column;gap:12px}
+.config-summary{font-size:12px;color:var(--muted);line-height:1.5;min-height:18px}
+.config-row{display:flex;flex-direction:column;gap:8px}
+.config-row.hidden{display:none}
 
 /* MAIN */
 .main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
@@ -381,17 +385,42 @@ textarea::placeholder{color:var(--faint)}
           <button class="gen-btn" id="gen-btn" onclick="generate()">
             ✦ Generar flujo de DMs
           </button>
-          <button class="config-btn" id="config-toggle" type="button" onclick="toggleConfig()" title="Configurar API key">
+          <button class="config-btn" id="config-toggle" type="button" onclick="toggleConfig()" title="Configurar IA">
             <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm8.5 3.5a1.5 1.5 0 0 1-.1.6l2.1 1.6a.5.5 0 0 1 .1.7l-2 3.4a.5.5 0 0 1-.6.2l-2.5-1a8.3 8.3 0 0 1-1.6.9l-.4 2.7a.5.5 0 0 1-.5.4h-4a.5.5 0 0 1-.5-.4l-.4-2.7a8.3 8.3 0 0 1-1.6-.9l-2.5 1a.5.5 0 0 1-.6-.2l-2-3.4a.5.5 0 0 1 .1-.7l2.1-1.6a1.5 1.5 0 0 1 0-1.2L2.1 10.6a.5.5 0 0 1-.1-.7l2-3.4a.5.5 0 0 1 .6-.2l2.5 1c.5-.3 1-.6 1.6-.9l.4-2.7A.5.5 0 0 1 9.5 3h4a.5.5 0 0 1 .5.4l.4 2.7c.6.2 1.1.5 1.6.9l2.5-1a.5.5 0 0 1 .6.2l2 3.4c.1.2.1.5-.1.7l-2.1 1.6c.1.2.1.5.1.7z"/></svg>
           </button>
         </div>
+        <div class="config-summary" id="config-summary">Usando la configuración por defecto del servidor.</div>
         <div class="config-panel" id="config-panel">
-          <div class="field-label">API key</div>
-          <input id="api-key-input" class="config-input" type="password" placeholder="sk-or-v1..." autocomplete="off" />
-          <div class="config-note">Guardada localmente en tu navegador. Se usará solo para esta sesión.</div>
+          <div class="config-grid">
+            <div class="config-row">
+              <div class="field-label">Proveedor</div>
+              <select id="provider-select" class="config-input" onchange="handleProviderChange()">
+                <option value="auto">Auto-detectar</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="groq">Groq</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="custom">OpenAI-compatible custom</option>
+              </select>
+            </div>
+            <div class="config-row">
+              <div class="field-label">API key</div>
+              <input id="api-key-input" class="config-input" type="password" placeholder="sk-or-v1-..." autocomplete="off" />
+            </div>
+            <div class="config-row">
+              <div class="field-label">Modelo</div>
+              <input id="model-input" class="config-input" type="text" placeholder="openai/gpt-4o-mini" autocomplete="off" />
+            </div>
+            <div class="config-row hidden" id="base-url-row">
+              <div class="field-label">Base URL</div>
+              <input id="base-url-input" class="config-input" type="text" placeholder="https://tu-proveedor.com/v1" autocomplete="off" />
+            </div>
+          </div>
+          <div class="config-note">Se guarda en tu navegador. Podés usar tu propia key de OpenRouter, Groq, OpenAI, Anthropic o cualquier endpoint OpenAI-compatible.</div>
           <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
             <button class="reset-btn" type="button" onclick="closeConfig()">Cancelar</button>
-            <button class="gen-btn" type="button" onclick="saveApiKey()">Guardar</button>
+            <button class="reset-btn" type="button" onclick="clearAiConfig()">Limpiar</button>
+            <button class="gen-btn" type="button" onclick="saveAiConfig()">Guardar</button>
           </div>
         </div>
         <button class="reset-btn" id="reset-btn" onclick="reset()" style="display:none">
@@ -474,86 +503,231 @@ textarea::placeholder{color:var(--faint)}
 const imgs = [];
 let flowData = null;
 let activeVariant = 0;
-const vColors = ['#c13584','#4d9de0','#22c55e'];
 const vGrads = [
   'linear-gradient(135deg,#833ab4,#e1306c)',
   'linear-gradient(135deg,#2563eb,#4d9de0)',
   'linear-gradient(135deg,#15803d,#22c55e)',
 ];
 
-const STORAGE_KEY = 'insta_cli_dms_api_key';
+const AI_CONFIG_STORAGE_KEY = 'insta_cli_dms_ai_config';
+const LEGACY_API_KEY_STORAGE_KEY = 'insta_cli_dms_api_key';
+const PROVIDER_PRESETS = {
+  auto: {
+    label: 'Auto',
+    model: 'gpt-4o-mini',
+    keyPlaceholder: 'Pegá tu API key y la app detecta el proveedor',
+  },
+  openrouter: {
+    label: 'OpenRouter',
+    model: 'openai/gpt-4o-mini',
+    keyPlaceholder: 'sk-or-v1-...',
+  },
+  groq: {
+    label: 'Groq',
+    model: 'llama-3.1-8b-instant',
+    keyPlaceholder: 'gsk_...',
+  },
+  openai: {
+    label: 'OpenAI',
+    model: 'gpt-4o-mini',
+    keyPlaceholder: 'sk-proj-...',
+  },
+  anthropic: {
+    label: 'Anthropic',
+    model: 'claude-3-5-sonnet-latest',
+    keyPlaceholder: 'sk-ant-...',
+  },
+  custom: {
+    label: 'Custom',
+    model: 'gpt-4o-mini',
+    keyPlaceholder: 'Tu API key',
+  },
+};
 
-function loadSavedKey(){
-  const key = localStorage.getItem(STORAGE_KEY) || '';
-  const input = document.getElementById('api-key-input');
-  if(input){ input.value = key; }
+function migrateLegacyApiKey(){
+  const savedConfig = localStorage.getItem(AI_CONFIG_STORAGE_KEY);
+  const legacyKey = localStorage.getItem(LEGACY_API_KEY_STORAGE_KEY);
+  if(savedConfig || !legacyKey) return;
+
+  localStorage.setItem(AI_CONFIG_STORAGE_KEY, JSON.stringify({
+    provider: 'auto',
+    apiKey: legacyKey,
+    model: '',
+    baseUrl: '',
+  }));
+}
+
+function getStoredAiConfig(){
+  migrateLegacyApiKey();
+
+  try{
+    const raw = localStorage.getItem(AI_CONFIG_STORAGE_KEY);
+    if(!raw){
+      return { provider:'auto', apiKey:'', model:'', baseUrl:'' };
+    }
+
+    const parsed = JSON.parse(raw);
+    return {
+      provider: parsed.provider || 'auto',
+      apiKey: parsed.apiKey || '',
+      model: parsed.model || '',
+      baseUrl: parsed.baseUrl || '',
+    };
+  }catch{
+    return { provider:'auto', apiKey:'', model:'', baseUrl:'' };
+  }
+}
+
+function readAiConfigFromInputs(){
+  return {
+    provider: document.getElementById('provider-select')?.value || 'auto',
+    apiKey: document.getElementById('api-key-input')?.value.trim() || '',
+    model: document.getElementById('model-input')?.value.trim() || '',
+    baseUrl: document.getElementById('base-url-input')?.value.trim() || '',
+  };
+}
+
+function loadSavedConfig(){
+  const config = getStoredAiConfig();
+
+  document.getElementById('provider-select').value = config.provider;
+  document.getElementById('api-key-input').value = config.apiKey;
+  document.getElementById('model-input').value = config.model;
+  document.getElementById('base-url-input').value = config.baseUrl;
+
+  syncProviderUi(false);
   updateConfigStatus();
 }
 
-function saveApiKey(){
-  const input = document.getElementById('api-key-input');
-  const key = input?.value.trim() || '';
-  if(!key){
-    alert('Ingresá tu API key para continuar.');
+function saveAiConfig(){
+  const config = readAiConfigFromInputs();
+  if(config.provider === 'custom' && !config.baseUrl){
+    alert('Si elegís un proveedor custom, cargá la Base URL.');
     return;
   }
-  localStorage.setItem(STORAGE_KEY, key);
+
+  localStorage.setItem(AI_CONFIG_STORAGE_KEY, JSON.stringify(config));
+  localStorage.removeItem(LEGACY_API_KEY_STORAGE_KEY);
   closeConfig();
   updateConfigStatus();
 }
 
-function getSavedKey(){
-  return document.getElementById('api-key-input')?.value.trim() || localStorage.getItem(STORAGE_KEY) || '';
+function clearAiConfig(){
+  localStorage.removeItem(AI_CONFIG_STORAGE_KEY);
+  localStorage.removeItem(LEGACY_API_KEY_STORAGE_KEY);
+
+  document.getElementById('provider-select').value = 'auto';
+  document.getElementById('api-key-input').value = '';
+  document.getElementById('model-input').value = '';
+  document.getElementById('base-url-input').value = '';
+
+  syncProviderUi(false);
+  updateConfigStatus();
 }
 
 function toggleConfig(){
-  const panel = document.getElementById('config-panel');
-  panel.classList.toggle('open');
+  document.getElementById('config-panel').classList.toggle('open');
 }
 
 function closeConfig(){
-  const panel = document.getElementById('config-panel');
-  panel.classList.remove('open');
+  document.getElementById('config-panel').classList.remove('open');
+}
+
+function handleProviderChange(){
+  syncProviderUi(true);
+}
+
+function syncProviderUi(forceAutofill){
+  const select = document.getElementById('provider-select');
+  const apiKeyInput = document.getElementById('api-key-input');
+  const modelInput = document.getElementById('model-input');
+  const baseUrlInput = document.getElementById('base-url-input');
+  const baseUrlRow = document.getElementById('base-url-row');
+  const currentProvider = select.value || 'auto';
+  const previousProvider = select.dataset.previous || currentProvider;
+  const currentPreset = PROVIDER_PRESETS[currentProvider] || PROVIDER_PRESETS.auto;
+  const previousPreset = PROVIDER_PRESETS[previousProvider] || PROVIDER_PRESETS.auto;
+
+  apiKeyInput.placeholder = currentPreset.keyPlaceholder;
+
+  const currentModel = modelInput.value.trim();
+  if(forceAutofill || !currentModel || currentModel === previousPreset.model){
+    modelInput.value = currentPreset.model || '';
+  }
+
+  if(currentProvider !== 'custom'){
+    baseUrlInput.value = '';
+  }
+
+  baseUrlRow.classList.toggle('hidden', currentProvider !== 'custom');
+  select.dataset.previous = currentProvider;
+}
+
+function getRequestAiConfig(){
+  const panelOpen = document.getElementById('config-panel').classList.contains('open');
+  return panelOpen ? readAiConfigFromInputs() : getStoredAiConfig();
 }
 
 function updateConfigStatus(){
   const btn = document.getElementById('config-toggle');
-  const key = localStorage.getItem(STORAGE_KEY) || '';
-  if(!btn) return;
-  btn.style.color = key ? '#fff' : 'var(--text2)';
+  const summary = document.getElementById('config-summary');
+  const config = getStoredAiConfig();
+  const provider = config.provider || 'auto';
+  const providerLabel = PROVIDER_PRESETS[provider]?.label || 'Auto';
+  const hasLocalConfig = Boolean(config.apiKey || config.model || config.baseUrl || provider !== 'auto');
+
+  btn.style.color = hasLocalConfig ? '#fff' : 'var(--text2)';
+  btn.style.borderColor = hasLocalConfig ? '#555' : 'var(--border2)';
+  btn.style.boxShadow = hasLocalConfig ? '0 0 0 3px rgba(131,58,180,.08)' : 'none';
+
+  if(!hasLocalConfig){
+    summary.textContent = 'Usando la configuración por defecto del servidor.';
+    return;
+  }
+
+  const details = [providerLabel];
+  if(config.model) details.push(config.model);
+  if(config.baseUrl) details.push('base URL custom');
+  if(config.apiKey) details.push('key local');
+  summary.textContent = `IA activa: ${details.join(' · ')}`;
 }
 
-// DRAG & DROP
 const zone = document.getElementById('upload-zone');
 zone.addEventListener('dragover', e=>{e.preventDefault();zone.classList.add('drag')});
 zone.addEventListener('dragleave', ()=>zone.classList.remove('drag'));
 zone.addEventListener('drop', e=>{
-  e.preventDefault();zone.classList.remove('drag');
+  e.preventDefault();
+  zone.classList.remove('drag');
   Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/')).forEach(addImg);
 });
 
 document.getElementById('file-input').addEventListener('change', function(e){
   Array.from(e.target.files).forEach(addImg);
-  this.value='';
+  this.value = '';
 });
 
-function addImg(f){
-  const r = new FileReader();
-  r.onload = ev => { imgs.push({name:f.name,src:ev.target.result}); renderPreviews(); };
-  r.readAsDataURL(f);
+function addImg(file){
+  const reader = new FileReader();
+  reader.onload = ev => {
+    imgs.push({ name:file.name, src:ev.target.result });
+    renderPreviews();
+  };
+  reader.readAsDataURL(file);
 }
 
 function renderPreviews(){
-  document.getElementById('previews').innerHTML = imgs.map((img,i)=>`
+  document.getElementById('previews').innerHTML = imgs.map((img, i) => `
     <div class="prev-wrap">
       <img src="${img.src}" class="prev-img" title="${img.name}"/>
       <button class="prev-rm" onclick="removeImg(${i})">×</button>
     </div>`).join('');
 }
 
-function removeImg(i){ imgs.splice(i,1); renderPreviews(); }
+function removeImg(i){
+  imgs.splice(i, 1);
+  renderPreviews();
+}
 
-// LOADING MESSAGES
 const loadMsgs = [
   'Analizando tu avatar',
   'Buscando los dolores del mercado',
@@ -562,15 +736,19 @@ const loadMsgs = [
   'Diseñando la pre-agenda',
   'Generando las 3 variantes',
 ];
-let loadIdx=0, loadTimer;
+let loadIdx = 0;
+let loadTimer;
 
 async function generate(){
   const prompt = document.getElementById('avatar-input').value.trim();
   if(!prompt){
     const ta = document.getElementById('avatar-input');
-    ta.style.borderColor='#e1306c';
-    ta.style.boxShadow='0 0 0 3px rgba(225,48,108,.15)';
-    setTimeout(()=>{ta.style.borderColor='';ta.style.boxShadow=''},2500);
+    ta.style.borderColor = '#e1306c';
+    ta.style.boxShadow = '0 0 0 3px rgba(225,48,108,.15)';
+    setTimeout(() => {
+      ta.style.borderColor = '';
+      ta.style.boxShadow = '';
+    }, 2500);
     return;
   }
 
@@ -580,26 +758,27 @@ async function generate(){
   document.getElementById('results').style.display = 'none';
   document.getElementById('loading-state').style.display = 'flex';
 
-  loadIdx=0;
-  const ltxt = document.getElementById('loading-txt');
+  loadIdx = 0;
+  const loadingText = document.getElementById('loading-txt');
   clearInterval(loadTimer);
-  loadTimer = setInterval(()=>{
-    loadIdx=(loadIdx+1)%loadMsgs.length;
-    ltxt.innerHTML = loadMsgs[loadIdx]+'<span class="dots"><span>.</span><span>.</span><span>.</span></span>';
-  },2200);
+  loadTimer = setInterval(() => {
+    loadIdx = (loadIdx + 1) % loadMsgs.length;
+    loadingText.innerHTML = loadMsgs[loadIdx] + '<span class="dots"><span>.</span><span>.</span><span>.</span></span>';
+  }, 2200);
 
-  // Build message content
   const content = [];
 
-  // Add images if any (for Claude vision)
-  imgs.forEach(img=>{
-    const [meta,b64] = img.src.split(',');
+  imgs.forEach(img => {
+    const [meta, b64] = img.src.split(',');
     const mediaType = meta.match(/:(.*?);/)?.[1] || 'image/jpeg';
-    content.push({type:'image',source:{type:'base64',media_type:mediaType,data:b64}});
+    content.push({ type:'image', source:{ type:'base64', media_type:mediaType, data:b64 } });
   });
 
-  if(imgs.length>0){
-    content.push({type:'text',text:`Estas son ${imgs.length} captura(s) del perfil de Instagram del usuario que te está hablando. Analizalas para entender su marca, estilo, propuesta de valor, tono, y cómo comunica para crear mensajes alineados a su identidad.`});
+  if(imgs.length > 0){
+    content.push({
+      type:'text',
+      text:`Estas son ${imgs.length} captura(s) del perfil de Instagram del usuario que te está hablando. Analizalas para entender su marca, estilo, propuesta de valor, tono, y cómo comunica para crear mensajes alineados a su identidad.`,
+    });
   }
 
   content.push({type:'text',text:`Sos un experto en ventas por DM de Instagram con años de experiencia cerrando clientes de alto valor de forma orgánica. Tu especialidad es crear flujos de conversación que se sienten 100% humanos, naturales y con mucho contexto del dolor del avatar.
@@ -639,142 +818,149 @@ Respondé ÚNICAMENTE con JSON válido, sin markdown, sin texto antes ni despué
 {"variants":[{"name":"Variante 1: Curiosidad + Dolor Implícito","pitch":[{"label":"Msg 1 — Conexión","text":"..."},{"label":"Msg 2 — Oferta","text":"..."},{"label":"Msg 3 — Invitación a Meet","text":"..."}],"seguimiento":[{"timing":"A las 24hs","text":"..."},{"timing":"A los 3 días","text":"..."},{"timing":"A los 7 días","text":"..."},{"timing":"A los 14 días","text":"..."},{"timing":"Al mes — Reactivación","text":"..."}],"preagenda":[{"step":"Confirmación inmediata","text":"..."},{"step":"24hs antes","text":"..."},{"step":"2hs antes","text":"..."},{"step":"No apareció","text":"..."},{"step":"Post-llamada sin cierre","text":"..."}]},{"name":"Variante 2: Dolor Directo + Autoridad","pitch":[...],"seguimiento":[...],"preagenda":[...]},{"name":"Variante 3: Historia + Resultado Concreto","pitch":[...],"seguimiento":[...],"preagenda":[...]}]}`});
 
   try{
-      const apiKey = getSavedKey();
-      const payload = apiKey ? { messages:[{role:'user',content}], apiKey } : { messages:[{role:'user',content}] };
-      const resp = await fetch('/api/generate',{ 
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(payload)
-      });
+    const aiConfig = getRequestAiConfig();
+    const response = await fetch('/api/generate', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({
+        messages:[{ role:'user', content }],
+        provider: aiConfig.provider,
+        model: aiConfig.model,
+        baseUrl: aiConfig.baseUrl,
+        apiKey: aiConfig.apiKey,
+        appName: 'Insta Cli DMs',
+        appUrl: window.location.origin,
+      }),
+    });
 
-    const d = await resp.json();
+    const data = await response.json();
     clearInterval(loadTimer);
 
-    if(d.error){
-      throw new Error(d.error.message||'API error');
+    if(data.error){
+      throw new Error(data.error.message || 'API error');
     }
 
-    const raw = d.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+    const raw = (data.content || []).map(block => block.text || '').join('').replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(raw);
     flowData = parsed;
     activeVariant = 0;
     renderResults();
-
   }catch(err){
     clearInterval(loadTimer);
     console.error(err);
-    document.getElementById('loading-state').style.display='none';
-    document.getElementById('empty-state').style.display='flex';
-    document.getElementById('gen-btn').disabled=false;
-    alert('Error al generar. Verificá tu conexión e intentá de nuevo.\n\n'+err.message);
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('empty-state').style.display = 'flex';
+    document.getElementById('gen-btn').disabled = false;
+    alert('Error al generar. Revisá la API key, el proveedor, el modelo y tu conexión.\n\n' + err.message);
   }
 }
 
 function renderResults(){
-  document.getElementById('loading-state').style.display='none';
-  document.getElementById('results').style.display='block';
-  document.getElementById('gen-btn').disabled=false;
-  document.getElementById('reset-btn').style.display='block';
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('gen-btn').disabled = false;
+  document.getElementById('reset-btn').style.display = 'block';
 
   const tabs = document.getElementById('variant-tabs');
-  tabs.innerHTML = flowData.variants.map((v,i)=>`
-    <button class="vtab v${i} ${i===activeVariant?'active':''}" onclick="selectVariant(${i})">${v.name}</button>
+  tabs.innerHTML = flowData.variants.map((variant, i) => `
+    <button class="vtab v${i} ${i===activeVariant?'active':''}" onclick="selectVariant(${i})">${variant.name}</button>
   `).join('');
 
-  // Reset section tabs to first
-  document.querySelectorAll('.stab').forEach((t,j)=>t.classList.toggle('active',j===0));
-  document.querySelectorAll('.tab-panel').forEach((p,j)=>p.classList.toggle('active',j===0));
+  document.querySelectorAll('.stab').forEach((tab, i) => tab.classList.toggle('active', i === 0));
+  document.querySelectorAll('.tab-panel').forEach((panel, i) => panel.classList.toggle('active', i === 0));
 
   renderVariantContent();
 }
 
 function selectVariant(i){
-  activeVariant=i;
-  document.querySelectorAll('.vtab').forEach((t,j)=>t.classList.toggle('active',j===i));
+  activeVariant = i;
+  document.querySelectorAll('.vtab').forEach((tab, index) => tab.classList.toggle('active', index === i));
   renderVariantContent();
-  document.querySelectorAll('.stab').forEach((t,j)=>t.classList.toggle('active',j===0));
-  document.querySelectorAll('.tab-panel').forEach((p,j)=>p.classList.toggle('active',j===0));
+  document.querySelectorAll('.stab').forEach((tab, index) => tab.classList.toggle('active', index === 0));
+  document.querySelectorAll('.tab-panel').forEach((panel, index) => panel.classList.toggle('active', index === 0));
 }
 
 function renderVariantContent(){
-  const v = flowData.variants[activeVariant];
-  const grad = vGrads[activeVariant] || vGrads[0];
+  const variant = flowData.variants[activeVariant];
+  const gradient = vGrads[activeVariant] || vGrads[0];
 
-  // PITCH
-  document.getElementById('panel-pitch').innerHTML = v.pitch.map((m,i)=>`
+  document.getElementById('panel-pitch').innerHTML = variant.pitch.map((message, i) => `
     <div class="msg-card">
       <div class="msg-card-head">
-        <div class="msg-num" style="background:${grad}">${i+1}</div>
-        <span class="msg-label">${m.label}</span>
+        <div class="msg-num" style="background:${gradient}">${i + 1}</div>
+        <span class="msg-label">${message.label}</span>
       </div>
-      <div class="msg-body">${escHtml(m.text)}</div>
-      <button class="copy-btn" onclick="cp(this,${JSON.stringify(m.text)})">Copiar</button>
+      <div class="msg-body">${escHtml(message.text)}</div>
+      <button class="copy-btn" onclick="cp(this,${JSON.stringify(message.text)})">Copiar</button>
     </div>`).join('');
 
-  // SEGUIMIENTO
-  document.getElementById('panel-seguimiento').innerHTML = v.seguimiento.map(s=>`
+  document.getElementById('panel-seguimiento').innerHTML = variant.seguimiento.map(item => `
     <div class="follow-row">
       <div class="follow-badge">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        <span class="follow-badge-txt">${escHtml(s.timing)}</span>
+        <span class="follow-badge-txt">${escHtml(item.timing)}</span>
       </div>
-      <div class="follow-body">${escHtml(s.text)}</div>
-      <button class="inline-copy" onclick="cp(this,${JSON.stringify(s.text)})">Copiar</button>
+      <div class="follow-body">${escHtml(item.text)}</div>
+      <button class="inline-copy" onclick="cp(this,${JSON.stringify(item.text)})">Copiar</button>
     </div>`).join('');
 
-  // PRE-AGENDA
-  document.getElementById('panel-preagenda').innerHTML = v.preagenda.map((p,i)=>`
+  document.getElementById('panel-preagenda').innerHTML = variant.preagenda.map((step, i) => `
     <div class="step-row">
-      <div class="step-num" style="background:${grad}">${i+1}</div>
+      <div class="step-num" style="background:${gradient}">${i + 1}</div>
       <div class="step-body">
-        <div class="step-name">${escHtml(p.step)}</div>
-        <div class="step-txt">${escHtml(p.text)}</div>
-        <button class="inline-copy" onclick="cp(this,${JSON.stringify(p.text)})">Copiar</button>
+        <div class="step-name">${escHtml(step.step)}</div>
+        <div class="step-txt">${escHtml(step.text)}</div>
+        <button class="inline-copy" onclick="cp(this,${JSON.stringify(step.text)})">Copiar</button>
       </div>
     </div>`).join('');
 }
 
-function switchSection(name,el){
-  document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));
+function switchSection(name, el){
+  document.querySelectorAll('.stab').forEach(tab => tab.classList.remove('active'));
   el.classList.add('active');
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+name).classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
 }
 
-function escHtml(s){
-  return s
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+function escHtml(value){
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 let toastTimer;
 function cp(btn, txt){
-  navigator.clipboard.writeText(txt).then(()=>{
-    const orig = btn.textContent;
-    btn.textContent='¡Copiado!';
+  navigator.clipboard.writeText(txt).then(() => {
+    const original = btn.textContent;
+    btn.textContent = '¡Copiado!';
     btn.classList.add('ok');
-    setTimeout(()=>{btn.textContent=orig;btn.classList.remove('ok')},2000);
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.classList.remove('ok');
+    }, 2000);
 
     const toast = document.getElementById('toast');
     clearTimeout(toastTimer);
     toast.classList.add('show');
-    toastTimer = setTimeout(()=>toast.classList.remove('show'),2200);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
   });
 }
 
 function reset(){
-  flowData=null;activeVariant=0;
-  imgs.length=0;renderPreviews();
-  document.getElementById('results').style.display='none';
-  document.getElementById('empty-state').style.display='flex';
-  document.getElementById('reset-btn').style.display='none';
-  document.getElementById('gen-btn').disabled=false;
-  document.getElementById('avatar-input').value='';
+  flowData = null;
+  activeVariant = 0;
+  imgs.length = 0;
+  renderPreviews();
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'flex';
+  document.getElementById('reset-btn').style.display = 'none';
+  document.getElementById('gen-btn').disabled = false;
+  document.getElementById('avatar-input').value = '';
 }
 
-loadSavedKey();
+loadSavedConfig();
 </script>
 </body>
 </html>

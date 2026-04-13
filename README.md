@@ -1,104 +1,110 @@
-# 🤖 Insta Cli DMs
+# Insta Cli DMs
 
-Generador de flujos de DMs para Instagram potenciado por IA (Claude de Anthropic).
+Generador de flujos de DMs para Instagram con soporte multi-provider.
 
-Genera 3 variantes de pitch + seguimientos + pre-agenda en segundos.
+## Qué cambió
 
----
+- Se eliminó la configuración basada en “proxy” para el usuario final.
+- La app ahora permite elegir proveedor, API key, modelo y base URL desde la UI.
+- Soporta `OpenRouter`, `Groq`, `OpenAI`, `Anthropic` y cualquier endpoint `OpenAI-compatible`.
+- La configuración se guarda localmente en el navegador.
 
-## 🚀 Deploy en Netlify (recomendado)
+## Deploy en Netlify
 
-1. **Subí este repo a GitHub**
-2. **Conectá el repo en [netlify.com](https://netlify.com)**
-3. Netlify detecta automáticamente el `netlify.toml`
-4. Ir a **Site settings → Environment variables** y agregar:
-   ```
-   AI_API_KEY = <tu_api_key>
-   AI_PROVIDER = openai
-   ```
-   o usa la key específica:
-   ```
-   OPENAI_API_KEY = <tu_api_key>
-   OPENROUTER_API_KEY = <tu_api_key>
-   GLOQ_API_KEY = <tu_api_key>
-   ANTHROPIC_API_KEY = <tu_api_key>
-   ```
-5. ¡Listo! El sitio quedará vivo en `https://tu-sitio.netlify.app`
-
-> También puedes ingresar tu API key directamente en la app usando la rueda de configuración junto al botón `Generar flujo de DMs`.
-
----
-
-## 💻 Correr en local
-
-### Requisitos
-- Node.js 18+
-
-### Pasos
+1. Subí este repo a GitHub.
+2. Conectá el repo en Netlify.
+3. Netlify detecta `netlify.toml` automáticamente.
+4. Si querés dejar un proveedor por defecto en el deploy, configurá variables de entorno:
 
 ```bash
-# 1. Instalar dependencias
+AI_PROVIDER=openrouter
+AI_MODEL=openai/gpt-4o-mini
+AI_API_KEY=tu_api_key
+```
+
+También podés usar variables específicas:
+
+```bash
+OPENAI_API_KEY=tu_api_key
+OPENROUTER_API_KEY=tu_api_key
+GROQ_API_KEY=tu_api_key
+ANTHROPIC_API_KEY=tu_api_key
+AI_BASE_URL=https://tu-proveedor.com/v1
+```
+
+La UI puede sobreescribir proveedor, key, modelo y base URL con la rueda de configuración.
+
+## Correr en local
+
+Requisitos:
+- Node.js 18+
+
+Pasos:
+
+```bash
 npm install
-
-# 2. Crear el archivo .env con tu API key
 cp .env.example .env
-# Editá .env y pegá tu API key en AI_API_KEY.
-#+ Opcional: `AI_PROVIDER=openai|anthropic|openrouter|gloq`
-# Si usas la UI, la key se guarda localmente en tu navegador.
-
-# 3. Iniciar el servidor
 npm start
-# → Abre http://localhost:3000
 ```
 
----
+La app queda disponible en `http://localhost:3000`.
 
-## 🔑 Cómo usar cualquier API key
+## Configuración de IA
 
-La app ahora puede funcionar con cualquier de estas keys:
+Desde la app podés definir:
 
-- `AI_API_KEY` (recomendado)
-- `OPENAI_API_KEY`
-- `OPENROUTER_API_KEY`
-- `GLOQ_API_KEY`
-- `ANTHROPIC_API_KEY`
+- `Proveedor`
+- `API key`
+- `Modelo`
+- `Base URL` opcional para proveedores OpenAI-compatible
 
-Si la variable `AI_PROVIDER` no está configurada, el backend intenta detectar el proveedor por el formato de la key.
+Si no cargás nada en la UI, la app usa la configuración del servidor.
 
-1. Copiá tu key de OpenAI, OpenRouter, Gloq o Anthropic.
-2. Pégala en `.env` como `AI_API_KEY`.
-3. Si quieres forzar el proveedor, agrega `AI_PROVIDER=openai|anthropic|openrouter|gloq`.
+## Variables de entorno
 
----
+Variables generales:
 
-## 📁 Estructura del proyecto
-
+```bash
+AI_PROVIDER=openai|openrouter|groq|anthropic|custom
+AI_MODEL=gpt-4o-mini
+AI_API_KEY=tu_api_key
+AI_BASE_URL=https://tu-proveedor.com/v1
+PORT=3000
 ```
+
+Variables por proveedor:
+
+```bash
+OPENAI_API_KEY=tu_api_key
+OPENROUTER_API_KEY=tu_api_key
+GROQ_API_KEY=tu_api_key
+ANTHROPIC_API_KEY=tu_api_key
+```
+
+Nota: `GLOQ_API_KEY` sigue funcionando por compatibilidad con versiones anteriores del proyecto, pero el nombre correcto es `GROQ_API_KEY`.
+
+## Estructura
+
+```text
 insta-cli-dms/
-├── index.html              # Frontend completo (UI)
-├── server.js               # Servidor Node.js para correr en local
-├── package.json
-├── netlify.toml            # Configuración de deploy en Netlify
+├── index.html
+├── server.js
+├── lib/
+│   └── ai-provider.js
 ├── netlify/
 │   └── functions/
-│       └── generate.js     # Proxy serverless para Netlify
-├── .env.example
-└── .gitignore
+│       └── generate.js
+├── package.json
+├── netlify.toml
+└── .env.example
 ```
 
----
+## GitHub
 
-## ⚙️ ¿Por qué hay un servidor proxy?
+Si ya tenés permisos de push configurados en esta máquina:
 
-La API key de Anthropic **nunca debe estar en el frontend** (cualquiera podría verla y usarla).
-
-El servidor (`server.js` para local, `generate.js` para Netlify) actúa como intermediario:
-- El browser llama a `/api/generate` en tu propio servidor
-- El servidor agrega la API key de forma segura y llama a Anthropic
-- La key jamás es visible en el browser
-
----
-
-## 📄 Licencia
-
-MIT
+```bash
+git add .
+git commit -m "Add multi-provider AI configuration"
+git push origin main
+```
