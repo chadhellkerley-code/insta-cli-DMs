@@ -587,6 +587,41 @@ function readAiConfigFromInputs(){
   };
 }
 
+function guessProviderFromApiKey(apiKey){
+  const key = String(apiKey || '').trim();
+  if(!key) return '';
+  if(key.startsWith('sk-ant-') || key.startsWith('anthropic-')) return 'anthropic';
+  if(key.startsWith('sk-or-') || key.startsWith('or-')) return 'openrouter';
+  if(key.startsWith('gsk_') || key.startsWith('groq-') || key.startsWith('gloq-') || key.startsWith('glq-')) return 'groq';
+  if(key.startsWith('sk-')) return 'openai';
+  return '';
+}
+
+function validateAiConfig(config){
+  if(config.provider === 'custom' && !config.baseUrl){
+    return 'Si elegís un proveedor custom, cargá la Base URL.';
+  }
+
+  const detectedProvider = guessProviderFromApiKey(config.apiKey);
+  if(
+    config.provider &&
+    config.provider !== 'auto' &&
+    config.provider !== 'custom' &&
+    detectedProvider &&
+    detectedProvider !== config.provider
+  ){
+    const providerNames = {
+      openrouter: 'OpenRouter',
+      groq: 'Groq',
+      openai: 'OpenAI',
+      anthropic: 'Anthropic',
+    };
+    return `La key que cargaste parece ser de ${providerNames[detectedProvider] || detectedProvider}, pero en la app está seleccionado ${providerNames[config.provider] || config.provider}. Cambiá el proveedor o usá "Auto-detectar".`;
+  }
+
+  return '';
+}
+
 function loadSavedConfig(){
   const config = getStoredAiConfig();
 
@@ -601,8 +636,9 @@ function loadSavedConfig(){
 
 function saveAiConfig(){
   const config = readAiConfigFromInputs();
-  if(config.provider === 'custom' && !config.baseUrl){
-    alert('Si elegís un proveedor custom, cargá la Base URL.');
+  const configError = validateAiConfig(config);
+  if(configError){
+    alert(configError);
     return;
   }
 
@@ -819,6 +855,11 @@ Respondé ÚNICAMENTE con JSON válido, sin markdown, sin texto antes ni despué
 
   try{
     const aiConfig = getRequestAiConfig();
+    const configError = validateAiConfig(aiConfig);
+    if(configError){
+      throw new Error(configError);
+    }
+
     const response = await fetch('/api/generate', {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
@@ -837,7 +878,7 @@ Respondé ÚNICAMENTE con JSON válido, sin markdown, sin texto antes ni despué
     clearInterval(loadTimer);
 
     if(data.error){
-      throw new Error(data.error.message || 'API error');
+      throw new Error(buildFriendlyAiError(data.error.message || 'API error', aiConfig));
     }
 
     const raw = (data.content || []).map(block => block.text || '').join('').replace(/```json|```/g, '').trim();
@@ -851,8 +892,35 @@ Respondé ÚNICAMENTE con JSON válido, sin markdown, sin texto antes ni despué
     document.getElementById('loading-state').style.display = 'none';
     document.getElementById('empty-state').style.display = 'flex';
     document.getElementById('gen-btn').disabled = false;
-    alert('Error al generar. Revisá la API key, el proveedor, el modelo y tu conexión.\n\n' + err.message);
+    alert('Error al generar.\n\n' + err.message);
   }
+}
+
+function buildFriendlyAiError(message, config){
+  const rawMessage = String(message || '').trim();
+  if(!rawMessage) return 'Ocurrió un error al llamar al proveedor de IA.';
+
+  if(config.provider === 'openrouter' && /user not found/i.test(rawMessage)){
+    return 'OpenRouter rechazó la API key: "User not found". Normalmente significa que la key es inválida, fue revocada o no corresponde a OpenRouter. Probá generar una nueva key en OpenRouter o cambiá el proveedor a "Auto-detectar" si esa key es de otro servicio.';
+  }
+
+  if(config.provider === 'openrouter' && /missing authentication header/i.test(rawMessage)){
+    return 'OpenRouter no recibió una API key válida. Revisá que la key esté pegada completa y sin espacios.';
+  }
+
+  if(config.provider === 'groq' && /invalid api key|unauthorized|authentication/i.test(rawMessage)){
+    return 'Groq rechazó la API key. Revisá que sea una key `gsk_...` válida y activa.';
+  }
+
+  if(config.provider === 'openai' && /incorrect api key|invalid api key|unauthorized|authentication/i.test(rawMessage)){
+    return 'OpenAI rechazó la API key. Revisá que sea una key válida del proyecto correcto.';
+  }
+
+  if(config.provider === 'anthropic' && /invalid x-api-key|authentication/i.test(rawMessage)){
+    return 'Anthropic rechazó la API key. Revisá que sea una key válida y que el modelo exista en tu cuenta.';
+  }
+
+  return rawMessage;
 }
 
 function renderResults(){
